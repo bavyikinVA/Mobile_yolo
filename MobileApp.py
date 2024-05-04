@@ -8,10 +8,8 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.camera import Camera
 from kivy.uix.screenmanager import ScreenManager, Screen
-
-import database_operations
 from predict import digit_detection
-
+import database
 Builder.load_string('''
 <LoadingScreen>:
     FloatLayout:
@@ -122,7 +120,7 @@ Builder.load_string('''
             pos_hint: {'center_x': 0.5, 'top': 1.0}  # Position in the first third of the screen
 
         TextInput:
-            id: username_fname
+            id: fname_input
             hint_text: 'Имя'
             multiline: False
             size_hint: (None, None)
@@ -132,7 +130,7 @@ Builder.load_string('''
             foreground_color: (0, 0, 0, 1)  # Text color: white
 
         TextInput:
-            id: user_lname
+            id: lname_input
             hint_text: 'Фамилия'
             multiline: False
             size_hint: (None, None)
@@ -151,6 +149,23 @@ Builder.load_string('''
             pos_hint: {'center_x': 0.5, 'center_y': 0.4}
             background_color: (1, 1, 1, 1)
             foreground_color: (0, 0, 0, 1)  # Text color: white
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint: (1, None)
+            height: self.minimum_height
+            padding: [dp(50), dp(50)]
+            CheckBox:
+                id: remember_me
+                group: 'remember'
+                active: False
+                size_hint: (None, None)
+                size: (dp(40), dp(40))
+            Label:
+                text: 'Запомнить'
+                size_hint: (None, None)
+                size: (dp(100), dp(40))
+                color: (0, 0, 0, 1)  # Text color: white
+                font_size: 20
         Button:
             text: 'Начать'
             size_hint: (None, None)
@@ -196,7 +211,7 @@ Builder.load_string('''
             pos_hint: {'center_x': 0.5}
             text: 'Сделать фото заново'
             size_hint: (None, None)
-            size: (, 70)
+            size: (dp(200), dp(70))
             on_release: root.retake_photo()
 ''')
 
@@ -225,17 +240,18 @@ class LoadingScreen(Screen):
 
 class RegistrationScreen(Screen):
     def register(self, dt):
-        database_operations.create_local_db()
+        database.create_db()
+        # database_operations.create_local_db()
         fname = self.ids.user_first_name_input.text
         lname = self.ids.user_last_name_input.text
         email_input = self.ids.email_input.text
         age_input = self.ids.age_input.text
         password_input = self.ids.password_input.text
-        registered = database_operations.register_in_db(fname, lname, email_input, age_input, password_input)
+        registered, current_user_id = database.add_new_user_to_db(fname, lname, email_input, age_input, password_input)
         if registered == "Успешно":
-            with open("data_about_user.txt", "r+") as f:
-                content = f.read().strip()  # strip() удаляет пробелы и символы перевода строки в начале и конце строки
-                new_content = str(int(content) + 1) + '\n' + fname + '\n' + lname + '\n' + password_input
+            with (open("data_about_user.txt", "r+") as f):
+                content = f.read().strip()
+                new_content = f"{str(int(content) + 1)}\n{fname}\n{lname}\n{password_input}\n{str(current_user_id)}"
                 f.seek(0)
                 f.write(new_content)
                 f.truncate()
@@ -244,17 +260,30 @@ class RegistrationScreen(Screen):
 
 # Экран авторизации
 class AuthenticationScreen(Screen):
+    def __init__(self, **kwargs):
+        super(AuthenticationScreen, self).__init__(**kwargs)
+        if os.path.exists("remembered_user.txt"):
+            with open("remembered_user.txt", "r") as f:
+                fname = f.readline().strip()
+                lname = f.readline().strip()
+                password = f.readline().strip()
+            self.ids.fname_input.text = fname
+            self.ids.lname_input.text = lname
+            self.ids.password_input.text = password
+            self.ids.remember_me.active = True
+
     def login(self, dt):
-        with open("data_about_user.txt", "r+") as f:
-            content = f.readlines()
-            fname = content[1].strip()
-            lname = content[2].strip()
-            password = self.ids.password_input.text
-            check_auth = database_operations.check_personal(fname, lname, password)
-            if check_auth == "Успешно":
-                self.manager.current = 'camera'
-            elif check_auth == "Ошибка ввода данных":
-                self.manager.current = 'auth'
+        fname = self.ids.fname_input.text
+        lname = self.ids.lname_input.text
+        password = self.ids.password_input.text
+        check_auth, current_user_id = database.authenticate_user(fname, lname, password)
+        if check_auth == "Успешно":
+            if self.ids.remember_me.active:
+                with open("remembered_user.txt", "w") as f:
+                    f.write(f"{fname}\n{lname}\n{password}\n{current_user_id}")
+            self.manager.current = 'camera'
+        elif check_auth == "Ошибка ввода данных":
+            self.manager.current = 'auth'
 
 
 # Экран камеры
@@ -279,12 +308,16 @@ class CameraScreen(Screen):
 
     def capture(self, instance):
         app_path = os.path.dirname(os.path.abspath(__file__))
+        images_dir = os.path.join(app_path, "images_dir")
+        if not os.path.exists(images_dir):
+            os.makedirs(images_dir)
+
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         photo_name = f"photo_{timestamp}.jpg"
-        photo_path = os.path.join(app_path, photo_name)
+        photo_path = os.path.join(images_dir, photo_name)
         self.camera.export_to_png(photo_path)
         print("Снимок сохранен в:", photo_path)
-        digit_array = digit_detection(photo_name)
+        digit_array = digit_detection(photo_path)
         print(digit_array)
         # переход на экран информации
         result_screen = self.manager.get_screen('result')
@@ -311,7 +344,11 @@ class ResultScreen(Screen):
         digits_label.text = f"Показатели: {digit_array}"
 
     def save_info(self):
-        database_operations.add_data_in_dimens_table(self.date_value, self.time_value, self.digits_array)
+        with open("remembered_user.txt", "r+") as f:
+            content = f.readlines()
+            user_id = content[3]
+            database.insert_data(user_id, self.date_value, self.time_value, self.digits_array)
+            # database_operations.add_data_in_dimens_table(self.date_value, self.time_value, self.digits_array)
 
     def retake_photo(self):
         self.manager.current = 'camera'
