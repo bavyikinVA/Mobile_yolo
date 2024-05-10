@@ -66,7 +66,7 @@ def authenticate_user(first_name, last_name, password):
 
     conn.close()
 
-    if result is None:
-        return "Неудача", None
+    if result is not None:
+        return "success"
     else:
-        return "Успешно", result[0]
+        return "error"
