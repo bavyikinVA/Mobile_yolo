@@ -1,6 +1,5 @@
 import os
 import time
-
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.lang import Builder
@@ -10,6 +9,7 @@ from kivy.uix.camera import Camera
 from kivy.uix.screenmanager import ScreenManager, Screen
 from predict import digit_detection
 import database
+
 Builder.load_string('''
 <LoadingScreen>:
     FloatLayout:
@@ -149,28 +149,12 @@ Builder.load_string('''
             pos_hint: {'center_x': 0.5, 'center_y': 0.4}
             background_color: (1, 1, 1, 1)
             foreground_color: (0, 0, 0, 1)  # Text color: white
-        BoxLayout:
-            orientation: 'horizontal'
-            size_hint: (1, None)
-            height: self.minimum_height
-            padding: [dp(50), dp(50)]
-            CheckBox:
-                id: remember_me
-                group: 'remember'
-                active: False
-                size_hint: (None, None)
-                size: (dp(40), dp(40))
-            Label:
-                text: 'Запомнить'
-                size_hint: (None, None)
-                size: (dp(100), dp(40))
-                color: (0, 0, 0, 1)  # Text color: white
-                font_size: 20
+
         Button:
             text: 'Начать'
             size_hint: (None, None)
             size: (200, 60)
-            pos_hint: {'center_x': 0.5, 'center_y': 0.3} 
+            pos_hint: {'center_x': 0.5, 'center_y': 0.2} 
             background_color: (1, 1, 1, 1)
             color: (0, 0, 0, 1)  # Text color: white
             on_release: root.login(None)
@@ -188,7 +172,6 @@ Builder.load_string('''
                     size: self.width - 6, self.height - 6
                     radius: [8]  # Rounded corners radius
 
-
 <ResultScreen>:
     BoxLayout:
         orientation: 'vertical'
@@ -201,6 +184,15 @@ Builder.load_string('''
         Label:
             id: digits_label
             text: ''
+        Label:
+            id: save_status_label
+            text: ''
+            canvas.before:
+                Color:
+                    rgba: (0, 1, 0, 1) if self.text == 'Успешно' else (1, 0, 0, 1)
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
         Button:
             text: 'Сохранить измерения'
             pos_hint: {'center_x': 0.5}
@@ -213,10 +205,45 @@ Builder.load_string('''
             size_hint: (None, None)
             size: (dp(200), dp(70))
             on_release: root.retake_photo()
+        Button:
+            pos_hint: {'center_x': 0.5}
+            text: 'Выйти из программы'
+            size_hint: (None, None)
+            size: (dp(200), dp(70))
+            on_release: app.stop()
+
+<SaveResultScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: [50, 50]
+        Label:
+            id: result_label
+            text: ''
+            font_size: 22
+            color: (1, 1, 1, 1)  # Text color: white
+            text_size: self.size
+            halign: 'center'
+            valign: 'middle'
+            padding_y: 50
+        Button:
+            text: 'Попробовать снова'
+            size_hint: (None, None)
+            size: (200, 60)
+            pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+            background_color: (1, 1, 1, 1)
+            color: (0, 0, 0, 1)  # Text color: black
+            on_release: root.try_again()
+        Button:
+            text: 'Выйти из программы'
+            size_hint: (None, None)
+            size: (200, 60)
+            pos_hint: {'center_x': 0.5, 'center_y': 0.3}
+            background_color: (1, 1, 1, 1)
+            color: (0, 0, 0, 1)  # Text color: black
+            on_release: app.stop()
 ''')
 
 
-# Экран загрузки
 class LoadingScreen(Screen):
     def __init__(self, **kwargs):
         super(LoadingScreen, self).__init__(**kwargs)
@@ -241,7 +268,6 @@ class LoadingScreen(Screen):
 class RegistrationScreen(Screen):
     def register(self, dt):
         database.create_db()
-        # database_operations.create_local_db()
         fname = self.ids.user_first_name_input.text
         lname = self.ids.user_last_name_input.text
         email_input = self.ids.email_input.text
@@ -258,19 +284,17 @@ class RegistrationScreen(Screen):
             self.manager.current = 'auth'
 
 
-# Экран авторизации
 class AuthenticationScreen(Screen):
     def __init__(self, **kwargs):
         super(AuthenticationScreen, self).__init__(**kwargs)
-        if os.path.exists("remembered_user.txt"):
-            with open("remembered_user.txt", "r") as f:
-                fname = f.readline().strip()
-                lname = f.readline().strip()
-                password = f.readline().strip()
-            self.ids.fname_input.text = fname
-            self.ids.lname_input.text = lname
-            self.ids.password_input.text = password
-            self.ids.remember_me.active = True
+        with open("data_about_user.txt", "r") as f:
+            _ = f.readline().strip()
+            fname = f.readline().strip()
+            lname = f.readline().strip()
+            password = f.readline().strip()
+        self.ids.fname_input.text = fname
+        self.ids.lname_input.text = lname
+        self.ids.password_input.text = password
 
     def login(self, dt):
         fname = self.ids.fname_input.text
@@ -278,15 +302,11 @@ class AuthenticationScreen(Screen):
         password = self.ids.password_input.text
         check_auth, current_user_id = database.authenticate_user(fname, lname, password)
         if check_auth == "Успешно":
-            if self.ids.remember_me.active:
-                with open("remembered_user.txt", "w") as f:
-                    f.write(f"{fname}\n{lname}\n{password}\n{current_user_id}")
             self.manager.current = 'camera'
         elif check_auth == "Ошибка ввода данных":
             self.manager.current = 'auth'
 
 
-# Экран камеры
 class CameraScreen(Screen):
     def __init__(self, **kwargs):
         super(CameraScreen, self).__init__(**kwargs)
@@ -331,6 +351,7 @@ class ResultScreen(Screen):
         self.date_value = ""
         self.time_value = ""
         self.digits_array = ""
+        self.user_id = ""
 
     def update_info(self, instance, digit_array):
         date_label = self.ids.date_label
@@ -344,17 +365,29 @@ class ResultScreen(Screen):
         digits_label.text = f"Показатели: {digit_array}"
 
     def save_info(self):
-        with open("remembered_user.txt", "r+") as f:
+        with open("data_about_user.txt", "r+") as f:
             content = f.readlines()
-            user_id = content[3]
-            database.insert_data(user_id, self.date_value, self.time_value, self.digits_array)
-            # database_operations.add_data_in_dimens_table(self.date_value, self.time_value, self.digits_array)
+            self.user_id = content[4]
+            success = database.insert_data(self.user_id, self.date_value, self.time_value, self.digits_array)
+            save_result_screen = self.manager.get_screen('save_result')
+            if success:
+                save_result_screen.ids.result_label.text = 'Успешно'
+            else:
+                save_result_screen.ids.result_label.text = 'Ошибка'
+            self.manager.current = 'save_result'
 
     def retake_photo(self):
         self.manager.current = 'camera'
 
 
-# Запуск приложения
+class SaveResultScreen(Screen):
+    def __init__(self, **kwargs):
+        super(SaveResultScreen, self).__init__(**kwargs)
+
+    def try_again(self):
+        self.manager.current = 'camera'
+
+
 class MainApp(App):
     def build(self):
         sm = ScreenManager()
@@ -363,6 +396,7 @@ class MainApp(App):
         sm.add_widget(AuthenticationScreen(name='auth'))
         sm.add_widget(CameraScreen(name='camera'))
         sm.add_widget(ResultScreen(name='result'))
+        sm.add_widget(SaveResultScreen(name='save_result'))
         return sm
 
 
