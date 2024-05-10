@@ -40,12 +40,20 @@ def add_new_user_to_db(first_name, last_name, email, age, password):
 
 
 def insert_data(user_id, date, time, measurement):
-    conn = psycopg2.connect(dbname="mobile", user="postgres", password="1234", host="localhost", port="5432")
-    cur = conn.cursor()
-    cur.execute("INSERT INTO user_{} (Date, Time, Measurement) VALUES (%s, %s, %s)".format(str(user_id)),
-                (date, time, measurement))
-    conn.commit()
-    conn.close()
+    success = False
+    try:
+        conn = psycopg2.connect(dbname="mobile", user="postgres", password="1234", host="localhost", port="5432")
+        cur = conn.cursor()
+        cur.execute("INSERT INTO user_{} (Date, Time, Measurement) VALUES (%s, %s, %s)".format(str(user_id)),
+                    (date, time, measurement))
+        conn.commit()
+        success = True
+    except Exception as e:
+        print(f"Error inserting data: {e}")
+    finally:
+        conn.close()
+
+    return success
 
 
 def authenticate_user(first_name, last_name, password):
