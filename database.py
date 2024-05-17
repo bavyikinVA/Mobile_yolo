@@ -50,6 +50,7 @@ def insert_data(user_id, date, time, measurement):
         success = True
     except Exception as e:
         print(f"Error inserting data: {e}")
+        success = False
     finally:
         conn.close()
 

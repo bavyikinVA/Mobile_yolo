@@ -115,7 +115,7 @@ def digit_detection(image_path):
                     return obj2[0] * 10 + (obj1[0]) + (obj3[0]) / 10
 
     if detections_array.shape[0] < 2:
-        return 'Пожалуйста повторите снимок'
+        return 'Retake photo please'
 
 
 def get_object_position(x1, y1, x2, y2, x3, y3, x4, y4):
