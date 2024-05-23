@@ -23,16 +23,19 @@ def create_db():
 def add_new_user_to_db(first_name, last_name, email, age, password):
     conn = psycopg2.connect(dbname="mobile", user="postgres", password="1234", host="localhost", port="5432")
     cur = conn.cursor()
-    # Вставка нового пользователя в таблицу
+
     cur.execute("INSERT INTO users (First_name, Last_name, Email, Age, Password) VALUES (%s, %s, %s, %s, %s) "
                 "RETURNING id", (first_name, last_name, email, age, password))
     user_id = cur.fetchone()[0]
     conn.commit()
 
-    # Создание таблицы для пользователя с идентификатором user_id
+    last_name_initial = last_name.upper()
+    first_name_initial = first_name[0].upper()
+    table_name = f"{last_name_initial}_{first_name_initial}"
+
     cur.execute(
-        "CREATE TABLE IF NOT EXISTS user_{} "
-        "(id SERIAL PRIMARY KEY, Date DATE, Time TIME, Measurement NUMERIC(3,1))".format(user_id))
+        f"CREATE TABLE IF NOT EXISTS {table_name}"
+        "(id SERIAL PRIMARY KEY, Date DATE, Time TIME, Measurement NUMERIC(3,1))")
     conn.commit()
     conn.close()
 
@@ -44,15 +47,21 @@ def insert_data(user_id, date, time, measurement):
     try:
         conn = psycopg2.connect(dbname="mobile", user="postgres", password="1234", host="localhost", port="5432")
         cur = conn.cursor()
-        cur.execute("INSERT INTO user_{} (Date, Time, Measurement) VALUES (%s, %s, %s)".format(str(user_id)),
+
+        cur.execute("SELECT first_name, last_name FROM users WHERE id = %s", (user_id,))
+        first_name, last_name = cur.fetchone()
+        first_name_initial = first_name[0].upper()
+        last_name_initial = last_name.upper()
+        table_name = f"{last_name_initial}_{first_name_initial}"
+
+        cur.execute(f"INSERT INTO {table_name} (Date, Time, Measurement) VALUES (%s, %s, %s)",
                     (date, time, measurement))
         conn.commit()
         success = True
+        conn.close()
     except Exception as e:
         print(f"Error inserting data: {e}")
         success = False
-    finally:
-        conn.close()
 
     return success
 

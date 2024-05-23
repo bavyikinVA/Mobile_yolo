@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import database
 import socket
 import json
@@ -61,19 +60,38 @@ def handle_connection(conn):
     # Receive the header (which contains the length of the JSON data)
     header_length = 10
     header_data = recv_all(conn, header_length)
-    header = header_data.decode()
+    try:
+        header = header_data.decode('utf-8')
+    except UnicodeDecodeError as e:
+        print(f"Error decoding header: {e}")
+        conn.close()
+        return
+
     header_int = int(header.strip())
 
     # Receive the JSON data
     json_data = recv_all(conn, header_int)
-    request = json.loads(json_data.decode())
+    try:
+        decoded_json_data = json_data.decode('utf-8')
+        request = json.loads(decoded_json_data)
+    except UnicodeDecodeError as e:
+        print(f"Error decoding JSON data: {e}")
+        conn.close()
+        return
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON data: {e}")
+        conn.close()
+        return
 
     # Handle the request and send a response
     response = handle_request(request)
-    conn.sendall(json.dumps(response).encode())
+    encoded_response = json.dumps(response).encode('utf-8')  # Encode the response using UTF-8
+    conn.sendall(encoded_response)
+    conn.close()
 
 
-def start_server(host="192.168.0.12", port=7000):
+def start_server(host="192.168.0.10", port=8080):
+    database.create_db()
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((host, port))
         s.listen()
