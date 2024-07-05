@@ -4,4 +4,4 @@
 
 Передача данных между клиентом и сервером посредством сокетов, проверено для локальной и глобальной сети
 
-Python, kiwy, PostgreSQL, Android.
+Python, kiwy, PostgreSQL, Docker, Android.
