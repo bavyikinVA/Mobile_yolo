@@ -10,6 +10,9 @@ from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.utils import platform
+from dotenv import load_dotenv
+
+load_dotenv()
 
 if platform == "android":
     from android.permissions import request_permissions, Permission
@@ -334,9 +337,9 @@ def convert_encoding(text, from_encoding, to_encoding):
 
 
 class DatabaseClient:
-    def __init__(self, host="80.82.38.188", port=8080):
-        self.host = host
-        self.port = port
+    def __init__(self, host=None, port=None):
+        self.host = host or os.getenv("CLIENT_BACKEND_HOST", "127.0.0.1")
+        self.port = int(port or os.getenv("CLIENT_BACKEND_PORT", "8080"))
 
     def send_request(self, request):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:

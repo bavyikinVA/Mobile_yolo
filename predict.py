@@ -3,11 +3,14 @@ from ultralytics import YOLO
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+from dotenv import load_dotenv
+
+load_dotenv()
 
 images_dir = os.path.join('.', 'test', 'images')
 model_path = os.path.join('.', 'runs', 'detect', 'train2', 'weights', 'best.pt')
 # Load a model
-model = YOLO('weights/best.pt')
+model = YOLO(os.getenv("YOLO_MODEL_PATH", "weights/best.pt"))
 
 
 def digit_detection(image_path):

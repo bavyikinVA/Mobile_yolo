@@ -46,7 +46,6 @@ logs/
 
 # ML / YOLO datasets and weights
 datasets/
-data/
 images/
 labels/
 runs/

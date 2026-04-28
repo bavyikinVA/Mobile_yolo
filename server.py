@@ -5,10 +5,12 @@ import predict
 import os
 import time
 import base64
+from dotenv import load_dotenv
 
+load_dotenv()
 
 def handle_request(request):
-    print(f"Request: {request}")
+    print(f"Request action: {request.get('action')}")
     if request['action'] == 'register':
         request.pop('action')
         registered, current_user_id = database.add_new_user_to_db(**request)
@@ -90,7 +92,9 @@ def handle_connection(conn):
     conn.close()
 
 
-def start_server(host="192.168.0.10", port=8080):
+def start_server(host=None, port=None):
+    host = host or os.getenv("BACKEND_HOST", "0.0.0.0")
+    port = int(port or os.getenv("BACKEND_PORT", "8080"))
     database.create_db()
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((host, port))
