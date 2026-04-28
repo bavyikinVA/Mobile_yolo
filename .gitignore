@@ -1,0 +1,85 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets.*
+config.local.*
+credentials.*
+token.*
+tokens.*
+
+# Logs
+*.log
+logs/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ML / YOLO datasets and weights
+datasets/
+data/
+images/
+labels/
+runs/
+weights/
+checkpoints/
+models/
+*.pt
+*.pth
+*.onnx
+*.engine
+*.tflite
+*.pb
+*.h5
+*.weights
+
+# Large archives
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+
+# Generated files
+output/
+outputs/
+results/
+predictions/
+exports/
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# Local config
+local_settings.py
